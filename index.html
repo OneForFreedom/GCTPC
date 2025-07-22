@@ -32,6 +32,14 @@
       right: 20px;
       font-size: 1.5rem;
       color: #00ffff;
+      z-index: 10;
+    }
+
+    #virus-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
     }
 
     .bottom {
@@ -79,6 +87,7 @@
       padding: 10px;
       overflow-y: auto;
       max-height: 100%;
+      color: #00ff00;
     }
 
     .command-item {
@@ -90,9 +99,13 @@
       position: absolute;
       width: 40px;
       height: 40px;
-      background: red;
       border-radius: 50%;
       animation: jiggle 0.5s infinite;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      cursor: pointer;
+      user-select: none;
     }
 
     @keyframes jiggle {
@@ -107,6 +120,9 @@
       position: absolute;
       font-size: 1rem;
       animation: floatUp 1s forwards;
+      color: #00ffff;
+      user-select: none;
+      pointer-events: none;
     }
 
     @keyframes floatUp {
@@ -126,7 +142,7 @@
         <div class="terminal-output" id="terminal-output"></div>
         <div class="terminal-input">
           <span class="prefix">C:\Windows\System32&gt;&nbsp;</span>
-          <input type="text" id="command-input" class="input-box" />
+          <input type="text" id="command-input" class="input-box" autocomplete="off" />
         </div>
       </div>
       <div class="commands" id="command-list"></div>
@@ -141,14 +157,18 @@
     const virusContainer = document.getElementById('virus-container');
 
     let voidwares = 0;
-    let commands = [];
     let activeCommands = [];
 
+    // How To Add / Rename / Add Sprites:
+    // 1. Add new command objects here with name, cost, rate, and image URL (relative or absolute).
+    // 2. For custom images, just add image: 'path/to/image.png' inside the command object.
+    // 3. Rename commands by changing the 'name' field.
+    // 4. The rest of the game auto-updates based on this list.
     const allCommands = [
-      { name: 'pinggoogle', cost: 0, rate: 1 },
-      { name: 'overloadRAM', cost: 25, rate: 5 },
-      { name: 'crashSys32', cost: 100, rate: 25 },
-      { name: 'fakeVirus.exe', cost: 250, rate: 75 },
+      { name: 'pinggoogle', cost: 0, rate: 1, image: 'https://i.imgur.com/6FzQJpL.png' }, // example image URL
+      { name: 'overloadRAM', cost: 25, rate: 5, image: 'https://i.imgur.com/3rKZ6pQ.png' },
+      { name: 'crashSys32', cost: 100, rate: 25, image: 'https://i.imgur.com/tpZQYZX.png' },
+      { name: 'fakeVirus.exe', cost: 250, rate: 75, image: 'https://i.imgur.com/h7Q7bKv.png' },
     ];
 
     function saveGame() {
@@ -173,22 +193,84 @@
       terminalOutput.scrollTop = terminalOutput.scrollHeight;
     }
 
+    function getRandomPosition(maxWidth, maxHeight, elementWidth, elementHeight) {
+      // ensures virus sprite is fully inside the container
+      const x = Math.random() * (maxWidth - elementWidth);
+      const y = Math.random() * (maxHeight - elementHeight);
+      return { x, y };
+    }
+
     function spawnVirus(cmd) {
       const virus = document.createElement('div');
       virus.classList.add('virus');
-      virus.style.left = Math.random() * (virusContainer.offsetWidth - 40) + 'px';
-      virus.style.top = Math.random() * (virusContainer.offsetHeight - 40) + 'px';
+
+      const containerWidth = virusContainer.clientWidth;
+      const containerHeight = virusContainer.clientHeight;
+      const virusSize = 40;
+
+      const pos = getRandomPosition(containerWidth, containerHeight, virusSize, virusSize);
+      virus.style.left = pos.x + 'px';
+      virus.style.top = pos.y + 'px';
+
+      if (cmd.image) {
+        virus.style.backgroundImage = `url(${cmd.image})`;
+      } else {
+        // fallback red circle
+        virus.style.background = 'red';
+      }
+
       virusContainer.appendChild(virus);
 
-      setInterval(() => {
-        const particle = document.createElement('div');
-        particle.classList.add('particle');
-        particle.textContent = '₩';
-        particle.style.left = virus.offsetLeft + 10 + 'px';
-        particle.style.top = virus.offsetTop + 'px';
-        virusContainer.appendChild(particle);
-        setTimeout(() => virusContainer.removeChild(particle), 1000);
+      // Particle spawn frequency & count based on cmd.rate
+      // More currency rate = more particles per second
+      // We'll spawn Math.min(10, Math.floor(rate / 5)) particles every second
+      const particlesPerTick = Math.min(10, Math.floor(cmd.rate / 5) || 1);
+
+      const intervalId = setInterval(() => {
+        for (let i = 0; i < particlesPerTick; i++) {
+          const particle = document.createElement('div');
+          particle.classList.add('particle');
+          particle.textContent = '₩';
+          // Randomize particle spawn around virus a bit
+          particle.style.left = (virus.offsetLeft + virusSize/2 + (Math.random() * 20 - 10)) + 'px';
+          particle.style.top = (virus.offsetTop + virusSize/2 + (Math.random() * 20 - 10)) + 'px';
+          // random scale effect to particle size (optional)
+          const scale = 0.7 + Math.random() * 0.6;
+          particle.style.fontSize = `${scale}rem`;
+          virusContainer.appendChild(particle);
+          setTimeout(() => {
+            if (virusContainer.contains(particle)) {
+              virusContainer.removeChild(particle);
+            }
+          }, 1000);
+        }
       }, 1000);
+
+      // Save interval ID so we can clear it if needed (e.g. on reload)
+      virus._particleInterval = intervalId;
+
+      // Optional: clicking the virus could give you currency or something
+      virus.addEventListener('click', () => {
+        voidwares += cmd.rate * 2; // bonus for clicking
+        updateCurrency();
+        saveGame();
+
+        // Also spawn a burst of particles on click
+        for (let i = 0; i < 20; i++) {
+          const burstParticle = document.createElement('div');
+          burstParticle.classList.add('particle');
+          burstParticle.textContent = '₩';
+          burstParticle.style.left = (virus.offsetLeft + virusSize/2 + (Math.random() * 40 - 20)) + 'px';
+          burstParticle.style.top = (virus.offsetTop + virusSize/2 + (Math.random() * 40 - 20)) + 'px';
+          burstParticle.style.fontSize = `${1 + Math.random()}rem`;
+          virusContainer.appendChild(burstParticle);
+          setTimeout(() => {
+            if (virusContainer.contains(burstParticle)) {
+              virusContainer.removeChild(burstParticle);
+            }
+          }, 1000);
+        }
+      });
     }
 
     function runCommand(cmdText) {
@@ -218,10 +300,14 @@
     });
 
     function populateCommands() {
+      commandList.innerHTML = ''; // clear old commands
       allCommands.forEach(cmd => {
         const div = document.createElement('div');
         div.classList.add('command-item');
         div.innerHTML = `<strong>${cmd.name}</strong><br/>Cost: ₩${cmd.cost}<br/>+${cmd.rate}/s`;
+        div.addEventListener('click', () => {
+          runCommand(cmd.name);
+        });
         commandList.appendChild(div);
       });
     }
