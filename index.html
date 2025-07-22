@@ -7,10 +7,11 @@
   <style>
     body {
       margin: 0;
-      font-family: monospace;
+      font-family: 'Courier New', monospace;
       background-color: #0e0e0e;
       color: #00ff00;
       overflow: hidden;
+      user-select: none;
     }
     .game {
       display: flex;
@@ -51,6 +52,11 @@
       max-height: 100%;
       margin-bottom: 10px;
       scroll-behavior: smooth;
+      text-shadow: 0 0 2px #00ff00;
+    }
+    .terminal-output div {
+      opacity: 0;
+      animation: fadeIn 0.3s forwards;
     }
     .terminal-input {
       display: flex;
@@ -73,12 +79,15 @@
       max-height: 100%;
     }
     .command-item {
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       cursor: pointer;
       user-select: none;
+      transition: color 0.2s, text-shadow 0.2s;
     }
     .command-item:hover {
-      text-decoration: underline;
+      text-decoration: none;
+      color: #00ffff;
+      text-shadow: 0 0 5px #00ffff;
     }
     .virus {
       position: absolute;
@@ -89,6 +98,11 @@
       animation: jiggle 0.5s infinite;
       cursor: pointer;
       user-select: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .virus:hover {
+      box-shadow: 0 0 10px red;
+      transform: scale(1.1);
     }
     @keyframes jiggle {
       0% { transform: translate(0, 0); }
@@ -111,6 +125,9 @@
     @keyframes floatUp {
       0% { opacity: 1; transform: translateY(0); }
       100% { opacity: 0; transform: translateY(-50px); }
+    }
+    @keyframes fadeIn {
+      to { opacity: 1; }
     }
     .error {
       color: #ff4444 !important;
@@ -166,15 +183,14 @@
     let currentPrices = allCommands.map(cmd => cmd.baseCost);
     const priceScale = 1.15;
     let rebirthCount = 0;
-
-    const baseRebirthCost = 1_000_000_000; // 1 billion
+    const baseRebirthCost = 1_000_000_000;
 
     function getRebirthCost() {
       return baseRebirthCost * Math.pow(2, rebirthCount);
     }
 
     function formatBigNumber(num) {
-      if (num < 1e9) return num.toLocaleString(undefined, {maximumFractionDigits: 2});
+      if (num < 1e9) return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
       let exponent = Math.floor(Math.log10(num));
       let n100count = Math.floor(exponent / 9);
       let mantissa = num / Math.pow(10, n100count * 9);
@@ -205,6 +221,7 @@
       purchaseCounts = JSON.parse(localStorage.getItem('purchaseCounts')) || new Array(allCommands.length).fill(0);
       currentPrices = JSON.parse(localStorage.getItem('currentPrices')) || allCommands.map(cmd => cmd.baseCost);
       rebirthCount = parseInt(localStorage.getItem('rebirthCount')) || 0;
+      addToTerminalOutput("Welcome to Go Crash The PC 🧨 Type 'help' if you're lost.");
     }
 
     function addToTerminalOutput(text, isError = false) {
@@ -227,25 +244,19 @@
         oscillator.connect(audioCtx.destination);
         oscillator.start();
         oscillator.stop(audioCtx.currentTime + 0.1);
-      } catch (e) {
-        // no sweat if unsupported
-      }
+      } catch (e) {}
     }
 
-    // Virus particle effect on click
     function createParticle(x, y) {
       const particle = document.createElement('div');
       particle.className = 'particle';
       particle.textContent = '₩';
-      particle.style.left = `${x}px`;
-      particle.style.top = `${y}px`;
+      particle.style.left = `${x - 10}px`;
+      particle.style.top = `${y - 20}px`;
       virusContainer.appendChild(particle);
-      setTimeout(() => {
-        virusContainer.removeChild(particle);
-      }, 1000);
+      setTimeout(() => virusContainer.removeChild(particle), 1000);
     }
 
-    // Add virus icons to the virus container
     function addViruses() {
       virusContainer.innerHTML = '';
       for (let i = 0; i < allCommands.length; i++) {
@@ -257,7 +268,7 @@
         virus.dataset.index = i;
         virus.addEventListener('click', (e) => {
           e.stopPropagation();
-          buyVirus(parseInt(e.target.dataset.index), e.clientX, e.clientY);
+          buyVirus(parseInt(e.target.dataset.index), e.pageX, e.pageY);
         });
         virusContainer.appendChild(virus);
       }
@@ -286,7 +297,7 @@
         div.className = 'command-item';
         div.textContent = `${cmd.name} - Cost: ₩${formatBigNumber(currentPrices[i])} - Owned: ${purchaseCounts[i]}`;
         div.addEventListener('click', () => {
-          buyVirus(i, window.innerWidth/2, window.innerHeight/2);
+          buyVirus(i, window.innerWidth / 2, window.innerHeight / 2);
         });
         commandList.appendChild(div);
       });
@@ -312,18 +323,15 @@
       commandList.appendChild(rebirthDiv);
     }
 
-    // Command input handler
     function handleCommand(cmd) {
       const parts = cmd.trim().split(/\s+/);
       if (parts.length === 0) return;
-
       const command = parts[0].toLowerCase();
-
       if (command === 'buy' && parts.length === 2) {
         const name = parts[1].toLowerCase();
         const index = allCommands.findIndex(c => c.name.toLowerCase() === name);
         if (index >= 0) {
-          buyVirus(index, window.innerWidth/2, window.innerHeight/2);
+          buyVirus(index, window.innerWidth / 2, window.innerHeight / 2);
         } else {
           addToTerminalOutput('Command not found: ' + parts[1], true);
         }
@@ -348,7 +356,6 @@
       }
     }
 
-    // Income loop
     setInterval(() => {
       voidwares += totalIncomePerSecond() / 10;
       updateCurrency();
@@ -365,7 +372,6 @@
       }
     });
 
-    // Initial setup
     loadGame();
     updateCurrency();
     updateCommands();
