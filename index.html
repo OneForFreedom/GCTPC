@@ -29,6 +29,7 @@
       right: 20px;
       font-size: 1.5rem;
       color: #00ffff;
+      user-select: none;
     }
     .bottom {
       flex: 3;
@@ -49,6 +50,7 @@
       overflow-y: auto;
       max-height: 100%;
       margin-bottom: 10px;
+      scroll-behavior: smooth;
     }
     .terminal-input {
       display: flex;
@@ -73,6 +75,10 @@
     .command-item {
       margin-bottom: 10px;
       cursor: pointer;
+      user-select: none;
+    }
+    .command-item:hover {
+      text-decoration: underline;
     }
     .virus {
       position: absolute;
@@ -81,6 +87,8 @@
       background: red;
       border-radius: 50%;
       animation: jiggle 0.5s infinite;
+      cursor: pointer;
+      user-select: none;
     }
     @keyframes jiggle {
       0% { transform: translate(0, 0); }
@@ -91,17 +99,22 @@
     }
     .particle {
       position: absolute;
-      font-size: 1rem;
+      font-size: 1.2rem;
       animation: floatUp 1s forwards;
       pointer-events: none;
       user-select: none;
       color: #00ffff;
       font-weight: bold;
       text-shadow: 0 0 5px #00ffff;
+      font-family: monospace;
     }
     @keyframes floatUp {
       0% { opacity: 1; transform: translateY(0); }
       100% { opacity: 0; transform: translateY(-50px); }
+    }
+    .error {
+      color: #ff4444 !important;
+      transition: color 0.5s ease;
     }
   </style>
 </head>
@@ -130,9 +143,8 @@
     const commandList = document.getElementById('command-list');
     const virusContainer = document.getElementById('virus-container');
 
-    // Base names, prices, and rates for 15 commands
     const allCommands = [
-      { name: 'pinggoogle', baseCost: 0.1, baseRate: 0.1 },
+      { name: 'pinggoogle', baseCost: 0, baseRate: 0.1 },
       { name: 'overloadRAM', baseCost: 1, baseRate: 0.5 },
       { name: 'crashSys32', baseCost: 5, baseRate: 2 },
       { name: 'fakeVirus.exe', baseCost: 20, baseRate: 10 },
@@ -153,228 +165,211 @@
     let purchaseCounts = new Array(allCommands.length).fill(0);
     let currentPrices = allCommands.map(cmd => cmd.baseCost);
     const priceScale = 1.15;
+    let rebirthCount = 0;
 
-    // Track total income per second (sum of all purchased * rate)
+    const baseRebirthCost = 1_000_000_000; // 1 billion
+
+    function getRebirthCost() {
+      return baseRebirthCost * Math.pow(2, rebirthCount);
+    }
+
+    function formatBigNumber(num) {
+      if (num < 1e9) return num.toLocaleString(undefined, {maximumFractionDigits: 2});
+      let exponent = Math.floor(Math.log10(num));
+      let n100count = Math.floor(exponent / 9);
+      let mantissa = num / Math.pow(10, n100count * 9);
+      return mantissa.toFixed(2) + 'n' + (n100count * 100);
+    }
+
+    function updateCurrency() {
+      currencyDisplay.textContent = `₩ ${formatBigNumber(voidwares)}`;
+    }
+
     function totalIncomePerSecond() {
       let total = 0;
       for (let i = 0; i < allCommands.length; i++) {
         total += purchaseCounts[i] * allCommands[i].baseRate;
       }
-      return total;
+      return total * (1 + rebirthCount * 0.1);
     }
 
-    // Save/load state
     function saveGame() {
       localStorage.setItem('voidwares', voidwares);
       localStorage.setItem('purchaseCounts', JSON.stringify(purchaseCounts));
       localStorage.setItem('currentPrices', JSON.stringify(currentPrices));
+      localStorage.setItem('rebirthCount', rebirthCount);
     }
 
     function loadGame() {
       voidwares = parseFloat(localStorage.getItem('voidwares')) || 0;
       purchaseCounts = JSON.parse(localStorage.getItem('purchaseCounts')) || new Array(allCommands.length).fill(0);
       currentPrices = JSON.parse(localStorage.getItem('currentPrices')) || allCommands.map(cmd => cmd.baseCost);
+      rebirthCount = parseInt(localStorage.getItem('rebirthCount')) || 0;
     }
 
-    // Update currency display
-    function updateCurrency() {
-      currencyDisplay.textContent = `₩ ${voidwares.toFixed(2)}`;
-    }
-
-    // Add line to terminal output
-    function addToTerminalOutput(text) {
+    function addToTerminalOutput(text, isError = false) {
       const line = document.createElement('div');
       line.textContent = text;
+      if (isError) {
+        line.classList.add('error');
+        setTimeout(() => line.classList.remove('error'), 1500);
+      }
       terminalOutput.appendChild(line);
       terminalOutput.scrollTop = terminalOutput.scrollHeight;
     }
 
-    // Spawn virus sprite fully inside container
-    function spawnVirus() {
-      const virus = document.createElement('div');
-      virus.classList.add('virus');
+    function playClickSound() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+        oscillator.connect(audioCtx.destination);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.1);
+      } catch (e) {
+        // no sweat if unsupported
+      }
+    }
 
-      // Calculate random position fully inside container
-      const maxLeft = virusContainer.clientWidth - 40;
-      const maxTop = virusContainer.clientHeight - 40;
-      virus.style.left = `${Math.random() * maxLeft}px`;
-      virus.style.top = `${Math.random() * maxTop}px`;
-
-      virusContainer.appendChild(virus);
-
-      // Particle emission every second, scaled by totalIncomePerSecond()
-      const particleCount = Math.min(Math.floor(totalIncomePerSecond() / 50) + 1, 10);
-      const particleInterval = setInterval(() => {
-        for (let i = 0; i < particleCount; i++) {
-          const particle = document.createElement('div');
-          particle.classList.add('particle');
-          particle.textContent = '₩';
-          // random offset near virus center
-          particle.style.left = `${virus.offsetLeft + 10 + (Math.random() * 20 - 10)}px`;
-          particle.style.top = `${virus.offsetTop + (Math.random() * 20 - 10)}px`;
-          virusContainer.appendChild(particle);
-          setTimeout(() => {
-            if (virusContainer.contains(particle)) virusContainer.removeChild(particle);
-          }, 1000);
-        }
+    // Virus particle effect on click
+    function createParticle(x, y) {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      particle.textContent = '₩';
+      particle.style.left = `${x}px`;
+      particle.style.top = `${y}px`;
+      virusContainer.appendChild(particle);
+      setTimeout(() => {
+        virusContainer.removeChild(particle);
       }, 1000);
-
-      // Remove interval if virus removed
-      virus.addEventListener('remove', () => clearInterval(particleInterval));
-
-      return virus;
     }
 
-    // Update the command list UI with price and DPS info
-    function updateCommandList() {
-      commandList.innerHTML = '';
+    // Add virus icons to the virus container
+    function addViruses() {
+      virusContainer.innerHTML = '';
       for (let i = 0; i < allCommands.length; i++) {
-        const cmd = allCommands[i];
-        const count = purchaseCounts[i];
-        const price = currentPrices[i];
-        const dps = (count * cmd.baseRate).toFixed(2);
-
-        const div = document.createElement('div');
-        div.classList.add('command-item');
-        div.innerHTML = `<strong>${cmd.name}</strong><br>Cost: ₩${price.toLocaleString(undefined, {minimumFractionDigits:2})}<br>Adds +${dps}/s (Owned: ${count})`;
-        div.onclick = () => buyOption(i);
-        commandList.appendChild(div);
-      }
-    }
-
-    // Buy logic with scaling price
-    function buyOption(index) {
-      const price = currentPrices[index];
-      if (voidwares >= price) {
-        voidwares -= price;
-        purchaseCounts[index]++;
-        // scale price
-        currentPrices[index] = +(price * priceScale).toFixed(2);
-        addToTerminalOutput(`Bought ${allCommands[index].name} for ₩${price.toFixed(2)}`);
-        updateCurrency();
-        updateCommandList();
-      } else {
-        addToTerminalOutput(`Not enough voidwares to buy ${allCommands[index].name} (Need ₩${price.toFixed(2)})`);
-      }
-    }
-
-    // Game loop: add voidwares from income every second
-    setInterval(() => {
-      const income = totalIncomePerSecond();
-      if (income > 0) {
-        voidwares += income;
-        updateCurrency();
-        updateCommandList();
-      }
-    }, 1000);
-
-    // Command processing
-    function processCommand(cmd) {
-      cmd = cmd.trim().toLowerCase();
-
-      if (!cmd) return;
-
-      addToTerminalOutput(`> ${cmd}`);
-
-      if (cmd === 'help') {
-        addToTerminalOutput('Commands: help, buy [item], rebirth, shutdown, status');
-      } else if (cmd.startsWith('buy ')) {
-        const itemName = cmd.substring(4);
-        const index = allCommands.findIndex(c => c.name.toLowerCase() === itemName);
-        if (index !== -1) {
-          buyOption(index);
-        } else {
-          addToTerminalOutput('Invalid item name');
-        }
-      } else if (cmd === 'rebirth') {
-        addToTerminalOutput('Rebirthing... All purchases reset!');
-        voidwares = 0;
-        purchaseCounts = new Array(allCommands.length).fill(0);
-        currentPrices = allCommands.map(c => c.baseCost);
-        updateCurrency();
-        updateCommandList();
-      } else if (cmd === 'rebirth all') {
-  const rebirthThreshold = 1_000_000_000 * Math.pow(10, rebirthCount); // rebirthCount starts at 0 and increments each rebirth
-
-  if (voidwares >= rebirthThreshold) {
-    addToTerminalOutput('Rebirth activated! Points doubled, prices reset. Clearing saves...');
-
-    // Double points
-    voidwares *= 2;
-
-    // Reset purchase counts and prices
-    purchaseCounts = new Array(allCommands.length).fill(0);
-    currentPrices = allCommands.map(c => c.baseCost);
-
-    // Reset active commands/voidwares
-    activeCommands = [];
-
-    // Increase rebirth count
-    rebirthCount++;
-
-    // Clear local storage and cookies
-    localStorage.clear();
-    clearAllCookies();
-
-    // Save updated game state (except localStorage will be wiped on reload anyway)
-    saveGame();
-
-    // Update UI
-    updateCurrency();
-    updateCommandList();
-
-    // Reload page to reset everything clean
-    location.reload();
-  } else {
-    addToTerminalOutput(`You need ${rebirthThreshold} voidwares to rebirth.`);
-  }
-}
-
-// Helper function to clear cookies
-function clearAllCookies() {
-  document.cookie.split(";").forEach(function(c) {
-    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date(0).toUTCString() + ";path=/");
-  });
-      } else if (cmd === 'status') {
-        addToTerminalOutput(`Voidwares: ₩${voidwares.toFixed(2)}`);
-        addToTerminalOutput(`Income/sec: ₩${totalIncomePerSecond().toFixed(2)}`);
-        addToTerminalOutput('Owned items:');
-        purchaseCounts.forEach((count, i) => {
-          if (count > 0) {
-            addToTerminalOutput(`${allCommands[i].name}: ${count} (DPS: ${(count * allCommands[i].baseRate).toFixed(2)})`);
-          }
+        const virus = document.createElement('div');
+        virus.className = 'virus';
+        virus.style.left = `${(i % 10) * 60 + 20}px`;
+        virus.style.top = `${Math.floor(i / 10) * 60 + 20}px`;
+        virus.title = `${allCommands[i].name} (Cost: ₩${formatBigNumber(currentPrices[i])})`;
+        virus.dataset.index = i;
+        virus.addEventListener('click', (e) => {
+          e.stopPropagation();
+          buyVirus(parseInt(e.target.dataset.index), e.clientX, e.clientY);
         });
+        virusContainer.appendChild(virus);
+      }
+    }
+
+    function buyVirus(index, clickX, clickY) {
+      if (voidwares >= currentPrices[index]) {
+        voidwares -= currentPrices[index];
+        purchaseCounts[index]++;
+        currentPrices[index] = Math.ceil(currentPrices[index] * priceScale);
+        addToTerminalOutput(`Bought ${allCommands[index].name} (Total: ${purchaseCounts[index]})`);
+        updateCurrency();
+        updateCommands();
+        createParticle(clickX - virusContainer.getBoundingClientRect().left, clickY - virusContainer.getBoundingClientRect().top);
+        playClickSound();
+        saveGame();
       } else {
-        addToTerminalOutput('Unknown command. Type help.');
+        addToTerminalOutput(`Not enough voidwares for ${allCommands[index].name}`, true);
       }
     }
 
-    // Init
-    function init() {
-      loadGame();
+    function updateCommands() {
+      commandList.innerHTML = '';
+      allCommands.forEach((cmd, i) => {
+        const div = document.createElement('div');
+        div.className = 'command-item';
+        div.textContent = `${cmd.name} - Cost: ₩${formatBigNumber(currentPrices[i])} - Owned: ${purchaseCounts[i]}`;
+        div.addEventListener('click', () => {
+          buyVirus(i, window.innerWidth/2, window.innerHeight/2);
+        });
+        commandList.appendChild(div);
+      });
+      const rebirthDiv = document.createElement('div');
+      rebirthDiv.className = 'command-item';
+      rebirthDiv.style.color = '#0ff';
+      const rebirthCost = getRebirthCost();
+      rebirthDiv.textContent = `Rebirth (Reset Progress) - Cost: ₩${formatBigNumber(rebirthCost)} - Owned: ${rebirthCount}`;
+      rebirthDiv.addEventListener('click', () => {
+        if (voidwares >= rebirthCost) {
+          rebirthCount++;
+          voidwares = 0;
+          purchaseCounts.fill(0);
+          currentPrices = allCommands.map(cmd => cmd.baseCost);
+          addToTerminalOutput('You have rebirthed! Progress reset but you gain 10% bonus income per rebirth.');
+          updateCurrency();
+          updateCommands();
+          saveGame();
+        } else {
+          addToTerminalOutput('Not enough voidwares to rebirth.', true);
+        }
+      });
+      commandList.appendChild(rebirthDiv);
+    }
+
+    // Command input handler
+    function handleCommand(cmd) {
+      const parts = cmd.trim().split(/\s+/);
+      if (parts.length === 0) return;
+
+      const command = parts[0].toLowerCase();
+
+      if (command === 'buy' && parts.length === 2) {
+        const name = parts[1].toLowerCase();
+        const index = allCommands.findIndex(c => c.name.toLowerCase() === name);
+        if (index >= 0) {
+          buyVirus(index, window.innerWidth/2, window.innerHeight/2);
+        } else {
+          addToTerminalOutput('Command not found: ' + parts[1], true);
+        }
+      } else if (command === 'rebirth') {
+        const cost = getRebirthCost();
+        if (voidwares >= cost) {
+          rebirthCount++;
+          voidwares = 0;
+          purchaseCounts.fill(0);
+          currentPrices = allCommands.map(cmd => cmd.baseCost);
+          addToTerminalOutput('Rebirth successful! Bonus income increased.');
+          updateCurrency();
+          updateCommands();
+          saveGame();
+        } else {
+          addToTerminalOutput(`Not enough voidwares for rebirth. Need ₩${formatBigNumber(cost)}.`, true);
+        }
+      } else if (command === 'help') {
+        addToTerminalOutput('Commands: buy [virusName], rebirth, help');
+      } else {
+        addToTerminalOutput('Unknown command. Type help for commands.', true);
+      }
+    }
+
+    // Income loop
+    setInterval(() => {
+      voidwares += totalIncomePerSecond() / 10;
       updateCurrency();
-      updateCommandList();
-      addToTerminalOutput('Welcome to Go Crash The PC!');
-      addToTerminalOutput('Type help for commands.');
+      saveGame();
+    }, 100);
 
-      // Spawn 5 viruses
-      for (let i = 0; i < 5; i++) {
-        spawnVirus();
-      }
-    }
-
-    input.addEventListener('keydown', e => {
+    input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        processCommand(input.value);
+        e.preventDefault();
+        const cmd = input.value;
         input.value = '';
+        addToTerminalOutput(`C:\\Windows\\System32> ${cmd}`);
+        handleCommand(cmd);
       }
     });
 
-    init();
-
-    // Save game every 10s
-    setInterval(saveGame, 10000);
-
+    // Initial setup
+    loadGame();
+    updateCurrency();
+    updateCommands();
+    addViruses();
   </script>
 </body>
 </html>
