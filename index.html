@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Go Crash The PC</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: monospace;
+      background-color: #0e0e0e;
+      color: #00ff00;
+      overflow: hidden;
+    }
+
+    .game {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .window {
+      flex: 5;
+      background-color: #111;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .currency {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 1.5rem;
+      color: #00ffff;
+    }
+
+    .bottom {
+      flex: 3;
+      display: flex;
+      background-color: #000;
+      overflow: hidden;
+    }
+
+    .terminal {
+      flex: 3;
+      display: flex;
+      flex-direction: column;
+      border-right: 2px solid #00ff00;
+      padding: 10px;
+      overflow: hidden;
+    }
+
+    .terminal-output {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 100%;
+      margin-bottom: 10px;
+    }
+
+    .terminal-input {
+      display: flex;
+    }
+
+    .prefix {
+      white-space: nowrap;
+    }
+
+    .input-box {
+      background: transparent;
+      border: none;
+      color: #00ff00;
+      flex: 1;
+      outline: none;
+      font-family: monospace;
+    }
+
+    .commands {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      max-height: 100%;
+    }
+
+    .command-item {
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+
+    .virus {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background: red;
+      border-radius: 50%;
+      animation: jiggle 0.5s infinite;
+    }
+
+    @keyframes jiggle {
+      0% { transform: translate(0, 0); }
+      25% { transform: translate(2px, -2px); }
+      50% { transform: translate(-2px, 2px); }
+      75% { transform: translate(2px, 2px); }
+      100% { transform: translate(0, 0); }
+    }
+
+    .particle {
+      position: absolute;
+      font-size: 1rem;
+      animation: floatUp 1s forwards;
+    }
+
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-50px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <div class="window">
+      <div class="currency" id="currency">₩ 0</div>
+      <div id="virus-container"></div>
+    </div>
+    <div class="bottom">
+      <div class="terminal">
+        <div class="terminal-output" id="terminal-output"></div>
+        <div class="terminal-input">
+          <span class="prefix">C:\Windows\System32&gt;&nbsp;</span>
+          <input type="text" id="command-input" class="input-box" />
+        </div>
+      </div>
+      <div class="commands" id="command-list"></div>
+    </div>
+  </div>
+
+  <script>
+    const currencyDisplay = document.getElementById('currency');
+    const terminalOutput = document.getElementById('terminal-output');
+    const input = document.getElementById('command-input');
+    const commandList = document.getElementById('command-list');
+    const virusContainer = document.getElementById('virus-container');
+
+    let voidwares = 0;
+    let commands = [];
+    let activeCommands = [];
+
+    const allCommands = [
+      { name: 'pinggoogle', cost: 0, rate: 1 },
+      { name: 'overloadRAM', cost: 25, rate: 5 },
+      { name: 'crashSys32', cost: 100, rate: 25 },
+      { name: 'fakeVirus.exe', cost: 250, rate: 75 },
+    ];
+
+    function saveGame() {
+      localStorage.setItem('voidwares', voidwares);
+      localStorage.setItem('activeCommands', JSON.stringify(activeCommands));
+    }
+
+    function loadGame() {
+      voidwares = parseInt(localStorage.getItem('voidwares')) || 0;
+      activeCommands = JSON.parse(localStorage.getItem('activeCommands')) || [];
+      activeCommands.forEach(spawnVirus);
+    }
+
+    function updateCurrency() {
+      currencyDisplay.textContent = `₩ ${voidwares}`;
+    }
+
+    function addToTerminalOutput(text) {
+      const line = document.createElement('div');
+      line.textContent = text;
+      terminalOutput.appendChild(line);
+      terminalOutput.scrollTop = terminalOutput.scrollHeight;
+    }
+
+    function spawnVirus(cmd) {
+      const virus = document.createElement('div');
+      virus.classList.add('virus');
+      virus.style.left = Math.random() * (virusContainer.offsetWidth - 40) + 'px';
+      virus.style.top = Math.random() * (virusContainer.offsetHeight - 40) + 'px';
+      virusContainer.appendChild(virus);
+
+      setInterval(() => {
+        const particle = document.createElement('div');
+        particle.classList.add('particle');
+        particle.textContent = '₩';
+        particle.style.left = virus.offsetLeft + 10 + 'px';
+        particle.style.top = virus.offsetTop + 'px';
+        virusContainer.appendChild(particle);
+        setTimeout(() => virusContainer.removeChild(particle), 1000);
+      }, 1000);
+    }
+
+    function runCommand(cmdText) {
+      const cmd = allCommands.find(c => c.name === cmdText);
+      if (cmd) {
+        if (voidwares >= cmd.cost) {
+          voidwares -= cmd.cost;
+          activeCommands.push(cmd);
+          spawnVirus(cmd);
+          addToTerminalOutput(`> ${cmdText} - Command run successfully.`);
+        } else {
+          addToTerminalOutput(`> ${cmdText} - Invalid. Funds too little.`);
+        }
+      } else if (cmdText === 'shutdown /r /t 0') {
+        localStorage.clear();
+        location.reload();
+      } else {
+        addToTerminalOutput(`> ${cmdText} - Invalid command.`);
+      }
+      input.value = '';
+      updateCurrency();
+      saveGame();
+    }
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') runCommand(input.value.trim());
+    });
+
+    function populateCommands() {
+      allCommands.forEach(cmd => {
+        const div = document.createElement('div');
+        div.classList.add('command-item');
+        div.innerHTML = `<strong>${cmd.name}</strong><br/>Cost: ₩${cmd.cost}<br/>+${cmd.rate}/s`;
+        commandList.appendChild(div);
+      });
+    }
+
+    function passiveIncome() {
+      activeCommands.forEach(cmd => voidwares += cmd.rate);
+      updateCurrency();
+      saveGame();
+    }
+
+    loadGame();
+    populateCommands();
+    updateCurrency();
+    setInterval(passiveIncome, 1000);
+  </script>
+</body>
+</html>
