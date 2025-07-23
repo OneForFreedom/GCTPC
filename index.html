@@ -1,381 +1,390 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Go Crash The PC</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Courier New', monospace;
-      background-color: #0e0e0e;
-      color: #00ff00;
-      overflow: hidden;
-      user-select: none;
-    }
-    .game {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-    .window {
-      flex: 5;
-      background-color: #111;
-      position: relative;
-      overflow: hidden;
-    }
-    .currency {
-      position: absolute;
-      top: 10px;
-      right: 20px;
-      font-size: 1.5rem;
-      color: #00ffff;
-      user-select: none;
-    }
-    .bottom {
-      flex: 3;
-      display: flex;
-      background-color: #000;
-      overflow: hidden;
-    }
-    .terminal {
-      flex: 3;
-      display: flex;
-      flex-direction: column;
-      border-right: 2px solid #00ff00;
-      padding: 10px;
-      overflow: hidden;
-    }
-    .terminal-output {
-      flex: 1;
-      overflow-y: auto;
-      max-height: 100%;
-      margin-bottom: 10px;
-      scroll-behavior: smooth;
-      text-shadow: 0 0 2px #00ff00;
-    }
-    .terminal-output div {
-      opacity: 0;
-      animation: fadeIn 0.3s forwards;
-    }
-    .terminal-input {
-      display: flex;
-    }
-    .prefix {
-      white-space: nowrap;
-    }
-    .input-box {
-      background: transparent;
-      border: none;
-      color: #00ff00;
-      flex: 1;
-      outline: none;
-      font-family: monospace;
-    }
-    .commands {
-      flex: 1;
-      padding: 10px;
-      overflow-y: auto;
-      max-height: 100%;
-    }
-    .command-item {
-      margin-bottom: 8px;
-      cursor: pointer;
-      user-select: none;
-      transition: color 0.2s, text-shadow 0.2s;
-    }
-    .command-item:hover {
-      text-decoration: none;
-      color: #00ffff;
-      text-shadow: 0 0 5px #00ffff;
-    }
-    .virus {
-      position: absolute;
-      width: 40px;
-      height: 40px;
-      background: red;
-      border-radius: 50%;
-      animation: jiggle 0.5s infinite;
-      cursor: pointer;
-      user-select: none;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .virus:hover {
-      box-shadow: 0 0 10px red;
-      transform: scale(1.1);
-    }
-    @keyframes jiggle {
-      0% { transform: translate(0, 0); }
-      25% { transform: translate(2px, -2px); }
-      50% { transform: translate(-2px, 2px); }
-      75% { transform: translate(2px, 2px); }
-      100% { transform: translate(0, 0); }
-    }
-    .particle {
-      position: absolute;
-      font-size: 1.2rem;
-      animation: floatUp 1s forwards;
-      pointer-events: none;
-      user-select: none;
-      color: #00ffff;
-      font-weight: bold;
-      text-shadow: 0 0 5px #00ffff;
-      font-family: monospace;
-    }
-    @keyframes floatUp {
-      0% { opacity: 1; transform: translateY(0); }
-      100% { opacity: 0; transform: translateY(-50px); }
-    }
-    @keyframes fadeIn {
-      to { opacity: 1; }
-    }
-    .error {
-      color: #ff4444 !important;
-      transition: color 0.5s ease;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Go Crash The PC - Terminal Clicker</title>
+<style>
+  /* System32 Terminal Style */
+  body {
+    margin: 0; padding: 0;
+    background: black;
+    color: #00ff00;
+    font-family: "Consolas", "Courier New", monospace;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+  #container {
+    display: flex;
+    width: 100%;
+  }
+  #terminal {
+    flex: 5;
+    background: #000;
+    border-right: 3px solid #007700;
+    padding: 15px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 8px;
+    text-shadow:
+      0 0 5px #00ff00,
+      0 0 10px #00ff00,
+      0 0 20px #00ff00;
+  }
+  #terminal-output {
+    overflow-y: auto;
+    flex-grow: 1;
+    scrollbar-width: thin;
+    scrollbar-color: #00ff00 #000;
+  }
+  #terminal-output::-webkit-scrollbar {
+    width: 8px;
+  }
+  #terminal-output::-webkit-scrollbar-thumb {
+    background: #00ff00;
+    border-radius: 4px;
+  }
+  #input-line {
+    display: flex;
+  }
+  #input-prompt {
+    user-select: none;
+  }
+  #command-input {
+    background: black;
+    border: none;
+    color: #00ff00;
+    font-family: inherit;
+    font-size: 1em;
+    flex-grow: 1;
+    outline: none;
+    text-shadow:
+      0 0 5px #00ff00,
+      0 0 10px #00ff00;
+  }
+  #points-box {
+    flex: 1;
+    background: #000;
+    border-left: 3px solid #007700;
+    padding: 15px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    text-shadow:
+      0 0 5px #00ff00,
+      0 0 10px #00ff00;
+  }
+  #points-box h2 {
+    margin-bottom: 10px;
+  }
+  #shop {
+    flex: 2;
+    background: #000;
+    border-left: 3px solid #007700;
+    padding: 15px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    text-shadow:
+      0 0 5px #00ff00,
+      0 0 10px #00ff00;
+  }
+  #shop h2 {
+    margin-top: 0;
+  }
+  .shop-item {
+    background: #003300;
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid #007700;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .shop-item:hover {
+    background: #005500;
+  }
+  .disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  /* Scrollbars for shop */
+  #shop::-webkit-scrollbar {
+    width: 8px;
+  }
+  #shop::-webkit-scrollbar-thumb {
+    background: #00ff00;
+    border-radius: 4px;
+  }
+</style>
 </head>
 <body>
-  <div class="game">
-    <div class="window">
-      <div class="currency" id="currency">₩ 0</div>
-      <div id="virus-container" style="width:100%; height:100%; position:relative;"></div>
-    </div>
-    <div class="bottom">
-      <div class="terminal">
-        <div class="terminal-output" id="terminal-output"></div>
-        <div class="terminal-input">
-          <span class="prefix">C:\Windows\System32&gt;&nbsp;</span>
-          <input type="text" id="command-input" class="input-box" autocomplete="off" />
-        </div>
+  <div id="container">
+    <div id="terminal">
+      <div id="terminal-output"></div>
+      <div id="input-line">
+        <span id="input-prompt">C:\Windows\System32&gt; </span>
+        <input type="text" id="command-input" autocomplete="off" autofocus />
       </div>
-      <div class="commands" id="command-list"></div>
+    </div>
+    <div id="points-box">
+      <h2>Total Points</h2>
+      <div id="points-display">0</div>
+      <h3>Multiplier: <span id="multiplier-display">1.0x</span></h3>
+      <h4>Rebirths: <span id="rebirths-display">0</span></h4>
+    </div>
+    <div id="shop">
+      <h2>Code Bank</h2>
+      <div id="shop-items"></div>
     </div>
   </div>
 
-  <script>
-    const currencyDisplay = document.getElementById('currency');
-    const terminalOutput = document.getElementById('terminal-output');
-    const input = document.getElementById('command-input');
-    const commandList = document.getElementById('command-list');
-    const virusContainer = document.getElementById('virus-container');
+<script>
+  // Game variables
+  let points = 0;
+  let pointsPerSecond = 0;
+  let multiplier = 1.0;
+  let rebirths = 0;
+  let rebirthThreshold = 1000000;
 
-    const allCommands = [
-      { name: 'pinggoogle', baseCost: 0, baseRate: 0.1 },
-      { name: 'overloadRAM', baseCost: 1, baseRate: 0.5 },
-      { name: 'crashSys32', baseCost: 5, baseRate: 2 },
-      { name: 'fakeVirus.exe', baseCost: 20, baseRate: 10 },
-      { name: 'wormAttack', baseCost: 100, baseRate: 50 },
-      { name: 'ransomwareX', baseCost: 500, baseRate: 200 },
-      { name: 'rootkit', baseCost: 2000, baseRate: 500 },
-      { name: 'ddosFlood', baseCost: 10000, baseRate: 1500 },
-      { name: 'trojanHorse', baseCost: 50000, baseRate: 5000 },
-      { name: 'backdoor', baseCost: 100000, baseRate: 10000 },
-      { name: 'keylogger', baseCost: 200000, baseRate: 25000 },
-      { name: 'botnet', baseCost: 300000, baseRate: 50000 },
-      { name: 'exploitKit', baseCost: 500000, baseRate: 100000 },
-      { name: 'zeroDay', baseCost: 750000, baseRate: 250000 },
-      { name: 'quantumHack', baseCost: 1000000, baseRate: 500000 },
-    ];
+  // Shop Items with cool names, cost, and points per second
+  const shopItems = [
+    { name: "RAM Overload", cost: 10, pps: 1, owned: 0 },
+    { name: "Fried CPU", cost: 50, pps: 5, owned: 0 },
+    { name: "Glitchy GPU", cost: 100, pps: 12, owned: 0 },
+    { name: "Blue Screen Booster", cost: 500, pps: 50, owned: 0 },
+    { name: "Registry Cleaner", cost: 1200, pps: 120, owned: 0 },
+    { name: "DLL Corruptor", cost: 2500, pps: 300, owned: 0 },
+    { name: "Cache Evaporator", cost: 5000, pps: 700, owned: 0 },
+    { name: "Virus Injector", cost: 10000, pps: 1600, owned: 0 },
+    { name: "Malware Manifest", cost: 20000, pps: 3500, owned: 0 },
+    { name: "Driver Disabler", cost: 40000, pps: 8000, owned: 0 },
+    { name: "Overclock Overlord", cost: 90000, pps: 18000, owned: 0 },
+    { name: "System Freeze", cost: 180000, pps: 40000, owned: 0 },
+    { name: "Packet Flooder", cost: 400000, pps: 85000, owned: 0 },
+    { name: "Memory Leak", cost: 800000, pps: 190000, owned: 0 },
+    { name: "Disk Thrash", cost: 1500000, pps: 420000, owned: 0 },
+    { name: "Blue Screen Redux", cost: 3000000, pps: 900000, owned: 0 },
+    { name: "Kernel Panic", cost: 6000000, pps: 2000000, owned: 0 },
+    { name: "Registry Bloat", cost: 12000000, pps: 4500000, owned: 0 },
+    { name: "Power Surge", cost: 25000000, pps: 10000000, owned: 0 },
+    { name: "Crash Loop", cost: 50000000, pps: 22000000, owned: 0 },
+    { name: "System Overload", cost: 100000000, pps: 48000000, owned: 0 },
+    { name: "Firmware Failure", cost: 200000000, pps: 105000000, owned: 0 },
+    { name: "CPU Meltdown", cost: 400000000, pps: 230000000, owned: 0 },
+    { name: "GPU Blackout", cost: 800000000, pps: 500000000, owned: 0 },
+    { name: "RAM Leak", cost: 1600000000, pps: 1100000000, owned: 0 },
+    { name: "Cache Corruption", cost: 3200000000, pps: 2400000000, owned: 0 },
+    { name: "Malware Explosion", cost: 6400000000, pps: 5200000000, owned: 0 },
+    { name: "Driver Crash", cost: 12800000000, pps: 11000000000, owned: 0 },
+    { name: "Overclock Crash", cost: 25600000000, pps: 23000000000, owned: 0 },
+    { name: "System Shutdown", cost: 51200000000, pps: 48000000000, owned: 0 },
+    { name: "Packet Storm", cost: 102400000000, pps: 100000000000, owned: 0 },
+    { name: "Memory Leak 2.0", cost: 204800000000, pps: 210000000000, owned: 0 },
+    { name: "Disk Thrash 2.0", cost: 409600000000, pps: 430000000000, owned: 0 },
+    { name: "Blue Screen Nightmare", cost: 819200000000, pps: 900000000000, owned: 0 },
+    { name: "Kernel Panic 2.0", cost: 1638400000000, pps: 1900000000000, owned: 0 },
+    { name: "Registry Bloat 2.0", cost: 3276800000000, pps: 4000000000000, owned: 0 },
+    { name: "Power Surge 2.0", cost: 6553600000000, pps: 8500000000000, owned: 0 },
+    { name: "Crash Loop 2.0", cost: 13107200000000, pps: 18000000000000, owned: 0 },
+    { name: "System Overload 2.0", cost: 26214400000000, pps: 38000000000000, owned: 0 },
+    { name: "Firmware Failure 2.0", cost: 52428800000000, pps: 82000000000000, owned: 0 },
+    { name: "CPU Meltdown 2.0", cost: 104857600000000, pps: 180000000000000, owned: 0 },
+    { name: "GPU Blackout 2.0", cost: 209715200000000, pps: 390000000000000, owned: 0 },
+    { name: "RAM Leak 2.0", cost: 419430400000000, pps: 850000000000000, owned: 0 },
+    { name: "Cache Corruption 2.0", cost: 838860800000000, pps: 1800000000000000, owned: 0 },
+    { name: "Malware Explosion 2.0", cost: 1677721600000000, pps: 3800000000000000, owned: 0 },
+    { name: "Driver Crash 2.0", cost: 3355443200000000, pps: 8200000000000000, owned: 0 },
+    { name: "Overclock Crash 2.0", cost: 6710886400000000, pps: 18000000000000000, owned: 0 },
+    { name: "System Shutdown 2.0", cost: 13421772800000000, pps: 39000000000000000, owned: 0 }
+  ];
 
-    let voidwares = 0;
-    let purchaseCounts = new Array(allCommands.length).fill(0);
-    let currentPrices = allCommands.map(cmd => cmd.baseCost);
-    const priceScale = 1.15;
-    let rebirthCount = 0;
-    const baseRebirthCost = 1_000_000_000;
-
-    function getRebirthCost() {
-      return baseRebirthCost * Math.pow(2, rebirthCount);
-    }
-
-    function formatBigNumber(num) {
-      if (num < 1e9) return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
-      let exponent = Math.floor(Math.log10(num));
-      let n100count = Math.floor(exponent / 9);
-      let mantissa = num / Math.pow(10, n100count * 9);
-      return mantissa.toFixed(2) + 'n' + (n100count * 100);
-    }
-
-    function updateCurrency() {
-      currencyDisplay.textContent = `₩ ${formatBigNumber(voidwares)}`;
-    }
-
-    function totalIncomePerSecond() {
-      let total = 0;
-      for (let i = 0; i < allCommands.length; i++) {
-        total += purchaseCounts[i] * allCommands[i].baseRate;
-      }
-      return total * (1 + rebirthCount * 0.1);
-    }
-
-    function saveGame() {
-      localStorage.setItem('voidwares', voidwares);
-      localStorage.setItem('purchaseCounts', JSON.stringify(purchaseCounts));
-      localStorage.setItem('currentPrices', JSON.stringify(currentPrices));
-      localStorage.setItem('rebirthCount', rebirthCount);
-    }
-
-    function loadGame() {
-      voidwares = parseFloat(localStorage.getItem('voidwares')) || 0;
-      purchaseCounts = JSON.parse(localStorage.getItem('purchaseCounts')) || new Array(allCommands.length).fill(0);
-      currentPrices = JSON.parse(localStorage.getItem('currentPrices')) || allCommands.map(cmd => cmd.baseCost);
-      rebirthCount = parseInt(localStorage.getItem('rebirthCount')) || 0;
-      addToTerminalOutput("Welcome to Go Crash The PC 🧨 Type 'help' if you're lost.");
-    }
-
-    function addToTerminalOutput(text, isError = false) {
-      const line = document.createElement('div');
-      line.textContent = text;
-      if (isError) {
-        line.classList.add('error');
-        setTimeout(() => line.classList.remove('error'), 1500);
-      }
-      terminalOutput.appendChild(line);
-      terminalOutput.scrollTop = terminalOutput.scrollHeight;
-    }
-
-    function playClickSound() {
-      try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioCtx.createOscillator();
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
-        oscillator.connect(audioCtx.destination);
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.1);
-      } catch (e) {}
-    }
-
-    function createParticle(x, y) {
-      const particle = document.createElement('div');
-      particle.className = 'particle';
-      particle.textContent = '₩';
-      particle.style.left = `${x - 10}px`;
-      particle.style.top = `${y - 20}px`;
-      virusContainer.appendChild(particle);
-      setTimeout(() => virusContainer.removeChild(particle), 1000);
-    }
-
-    function addViruses() {
-      virusContainer.innerHTML = '';
-      for (let i = 0; i < allCommands.length; i++) {
-        const virus = document.createElement('div');
-        virus.className = 'virus';
-        virus.style.left = `${(i % 10) * 60 + 20}px`;
-        virus.style.top = `${Math.floor(i / 10) * 60 + 20}px`;
-        virus.title = `${allCommands[i].name} (Cost: ₩${formatBigNumber(currentPrices[i])})`;
-        virus.dataset.index = i;
-        virus.addEventListener('click', (e) => {
-          e.stopPropagation();
-          buyVirus(parseInt(e.target.dataset.index), e.pageX, e.pageY);
-        });
-        virusContainer.appendChild(virus);
-      }
-    }
-
-    function buyVirus(index, clickX, clickY) {
-      if (voidwares >= currentPrices[index]) {
-        voidwares -= currentPrices[index];
-        purchaseCounts[index]++;
-        currentPrices[index] = Math.ceil(currentPrices[index] * priceScale);
-        addToTerminalOutput(`Bought ${allCommands[index].name} (Total: ${purchaseCounts[index]})`);
-        updateCurrency();
-        updateCommands();
-        createParticle(clickX - virusContainer.getBoundingClientRect().left, clickY - virusContainer.getBoundingClientRect().top);
-        playClickSound();
-        saveGame();
-      } else {
-        addToTerminalOutput(`Not enough voidwares for ${allCommands[index].name}`, true);
-      }
-    }
-
-    function updateCommands() {
-      commandList.innerHTML = '';
-      allCommands.forEach((cmd, i) => {
-        const div = document.createElement('div');
-        div.className = 'command-item';
-        div.textContent = `${cmd.name} - Cost: ₩${formatBigNumber(currentPrices[i])} - Owned: ${purchaseCounts[i]}`;
-        div.addEventListener('click', () => {
-          buyVirus(i, window.innerWidth / 2, window.innerHeight / 2);
-        });
-        commandList.appendChild(div);
-      });
-      const rebirthDiv = document.createElement('div');
-      rebirthDiv.className = 'command-item';
-      rebirthDiv.style.color = '#0ff';
-      const rebirthCost = getRebirthCost();
-      rebirthDiv.textContent = `Rebirth (Reset Progress) - Cost: ₩${formatBigNumber(rebirthCost)} - Owned: ${rebirthCount}`;
-      rebirthDiv.addEventListener('click', () => {
-        if (voidwares >= rebirthCost) {
-          rebirthCount++;
-          voidwares = 0;
-          purchaseCounts.fill(0);
-          currentPrices = allCommands.map(cmd => cmd.baseCost);
-          addToTerminalOutput('You have rebirthed! Progress reset but you gain 10% bonus income per rebirth.');
-          updateCurrency();
-          updateCommands();
-          saveGame();
-        } else {
-          addToTerminalOutput('Not enough voidwares to rebirth.', true);
+  // Load saved game from localStorage
+  function loadGame() {
+    const saved = localStorage.getItem("goCrashSave");
+    if (saved) {
+      const data = JSON.parse(saved);
+      points = data.points || 0;
+      multiplier = data.multiplier || 1.0;
+      rebirths = data.rebirths || 0;
+      pointsPerSecond = data.pointsPerSecond || 0;
+      shopItems.forEach((item, idx) => {
+        if (data.shopItems && data.shopItems[idx]) {
+          item.owned = data.shopItems[idx].owned || 0;
         }
       });
-      commandList.appendChild(rebirthDiv);
+      updateMultiplier();
+      updatePointsUI();
+      updateShop();
+      updateRebirthUI();
+      printLine("Save loaded.");
+    } else {
+      printLine("Welcome to Go Crash The PC! Type 'help' for commands.");
     }
+  }
 
-    function handleCommand(cmd) {
-      const parts = cmd.trim().split(/\s+/);
-      if (parts.length === 0) return;
-      const command = parts[0].toLowerCase();
-      if (command === 'buy' && parts.length === 2) {
-        const name = parts[1].toLowerCase();
-        const index = allCommands.findIndex(c => c.name.toLowerCase() === name);
-        if (index >= 0) {
-          buyVirus(index, window.innerWidth / 2, window.innerHeight / 2);
-        } else {
-          addToTerminalOutput('Command not found: ' + parts[1], true);
-        }
-      } else if (command === 'rebirth') {
-        const cost = getRebirthCost();
-        if (voidwares >= cost) {
-          rebirthCount++;
-          voidwares = 0;
-          purchaseCounts.fill(0);
-          currentPrices = allCommands.map(cmd => cmd.baseCost);
-          addToTerminalOutput('Rebirth successful! Bonus income increased.');
-          updateCurrency();
-          updateCommands();
-          saveGame();
-        } else {
-          addToTerminalOutput(`Not enough voidwares for rebirth. Need ₩${formatBigNumber(cost)}.`, true);
-        }
-      } else if (command === 'help') {
-        addToTerminalOutput('Commands: buy [virusName], rebirth, help');
-      } else {
-        addToTerminalOutput('Unknown command. Type help for commands.', true);
-      }
+  // Save game to localStorage
+  function saveGame() {
+    const saveData = {
+      points,
+      multiplier,
+      rebirths,
+      pointsPerSecond,
+      shopItems: shopItems.map(i => ({ owned: i.owned }))
+    };
+    localStorage.setItem("goCrashSave", JSON.stringify(saveData));
+  }
+
+  // Update multiplier based on rebirths
+  function updateMultiplier() {
+    multiplier = Math.pow(1.5, rebirths);
+  }
+
+  // Calculate total points per second based on shop and multiplier
+  function calculatePointsPerSecond() {
+    let total = 0;
+    for (const item of shopItems) {
+      total += item.pps * item.owned;
     }
+    pointsPerSecond = total * multiplier;
+  }
 
-    setInterval(() => {
-      voidwares += totalIncomePerSecond() / 10;
-      updateCurrency();
-      saveGame();
-    }, 100);
+  // Update points UI
+  function updatePointsUI() {
+    document.getElementById("points-display").textContent = points.toLocaleString();
+    document.getElementById("multiplier-display").textContent = multiplier.toFixed(1) + "x";
+  }
 
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const cmd = input.value;
-        input.value = '';
-        addToTerminalOutput(`C:\\Windows\\System32> ${cmd}`);
-        handleCommand(cmd);
-      }
+  // Update rebirth UI
+  function updateRebirthUI() {
+    document.getElementById("rebirths-display").textContent = rebirths;
+  }
+
+  // Print line to terminal output
+  function printLine(text) {
+    const output = document.getElementById("terminal-output");
+    const line = document.createElement("div");
+    line.textContent = text;
+    output.appendChild(line);
+    output.scrollTop = output.scrollHeight;
+  }
+
+  // Update shop display
+  function updateShop() {
+    const shopDiv = document.getElementById("shop-items");
+    shopDiv.innerHTML = "";
+    shopItems.forEach((item, idx) => {
+      const div = document.createElement("div");
+      div.className = "shop-item" + (points >= item.cost ? "" : " disabled");
+      div.textContent = `${item.name} | Cost: ${item.cost.toLocaleString()} | PPS: ${item.pps} | Owned: ${item.owned}`;
+      div.onclick = () => {
+        buyItem(idx);
+      };
+      shopDiv.appendChild(div);
     });
+  }
 
-    loadGame();
-    updateCurrency();
-    updateCommands();
-    addViruses();
-  </script>
+  // Buy item function
+  function buyItem(index) {
+    const item = shopItems[index];
+    if (points >= item.cost) {
+      points -= item.cost;
+      item.owned++;
+      calculatePointsPerSecond();
+      updatePointsUI();
+      updateShop();
+      printLine(`Bought ${item.name}!`);
+    } else {
+      printLine(`Not enough points to buy ${item.name}.`);
+    }
+  }
+
+  // Handle rebirth function
+  function rebirthAll() {
+    if (points >= rebirthThreshold) {
+      points = 0;
+      rebirths++;
+      updateMultiplier();
+      calculatePointsPerSecond();
+      updatePointsUI();
+      updateRebirthUI();
+      printLine(`Rebirth successful! Multiplier is now ${multiplier.toFixed(2)}x`);
+      // Double the rebirth threshold for next time
+      rebirthThreshold *= 2;
+    } else {
+      printLine(`You need ${rebirthThreshold.toLocaleString()} points to rebirth.`);
+    }
+  }
+
+  // Handle commands typed in terminal
+  function handleCommand(cmd) {
+    const command = cmd.trim().toLowerCase();
+    switch (command) {
+      case "crash":
+        points += 1;
+        updatePointsUI();
+        printLine("Crash command activated! You got 1 point.");
+        break;
+      case "help":
+        printLine("Commands:");
+        printLine("crash - Gain 1 point.");
+        printLine("rebirth_all - Reset points for x1.5 multiplier.");
+        printLine("buy <item name> - Buy items from Code Bank.");
+        printLine("points - Show current points.");
+        break;
+      case "points":
+        printLine(`You have ${points.toLocaleString()} points.`);
+        break;
+      case "rebirth_all":
+        rebirthAll();
+        break;
+      default:
+        if (command.startsWith("buy ")) {
+          let itemName = cmd.slice(4).trim().toLowerCase();
+          // Find shop item by name ignoring case & spaces
+          const itemIndex = shopItems.findIndex(
+            item => item.name.toLowerCase() === itemName
+          );
+          if (itemIndex !== -1) {
+            buyItem(itemIndex);
+          } else {
+            printLine(`Item "${cmd.slice(4)}" not found in Code Bank.`);
+          }
+        } else {
+          printLine(`Unknown command: ${cmd}`);
+        }
+        break;
+    }
+    saveGame();
+  }
+
+  // Terminal input event
+  const commandInput = document.getElementById("command-input");
+  commandInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      const cmd = commandInput.value;
+      printLine(`C:\\Windows\\System32> ${cmd}`);
+      handleCommand(cmd);
+      commandInput.value = "";
+    }
+  });
+
+  // Game loop for auto points per second
+  setInterval(() => {
+    points += pointsPerSecond;
+    updatePointsUI();
+    saveGame();
+  }, 1000);
+
+  // Initialize
+  loadGame();
+  calculatePointsPerSecond();
+  updateShop();
+  updateRebirthUI();
+
+</script>
 </body>
 </html>
