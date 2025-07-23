@@ -183,169 +183,159 @@
     { name: "Overclock Crash", cost: 25600000000, pps: 23000000000, owned: 0 },
     { name: "System Shutdown", cost: 51200000000, pps: 48000000000, owned: 0 },
     { name: "Packet Storm", cost: 102400000000, pps: 100000000000, owned: 0 },
-    { name: "Memory Leak 2.0", cost: 204800000000, pps: 210000000000, owned: 0 },
-    { name: "Disk Thrash 2.0", cost: 409600000000, pps: 430000000000, owned: 0 },
-    { name: "Blue Screen Nightmare", cost: 819200000000, pps: 890000000000, owned: 0 },
-    { name: "Kernel Panic 2.0", cost: 1638400000000, pps: 1900000000000, owned: 0 },
-    { name: "Registry Bloat 2.0", cost: 3276800000000, pps: 4000000000000, owned: 0 },
-    { name: "Power Surge 2.0", cost: 6553600000000, pps: 8300000000000, owned: 0 },
-    { name: "Crash Loop 2.0", cost: 13107200000000, pps: 17000000000000, owned: 0 },
-    { name: "System Overload 2.0", cost: 26214400000000, pps: 35000000000000, owned: 0 },
-    { name: "Firmware Failure 2.0", cost: 52428800000000, pps: 72000000000000, owned: 0 },
-    { name: "CPU Meltdown 2.0", cost: 104857600000000, pps: 150000000000000, owned: 0 },
-    { name: "GPU Blackout 2.0", cost: 209715200000000, pps: 310000000000000, owned: 0 },
-    { name: "RAM Leak 2.0", cost: 419430400000000, pps: 640000000000000, owned: 0 },
-    { name: "Cache Corruption 2.0", cost: 838860800000000, pps: 1300000000000000, owned: 0 },
-    { name: "Malware Explosion 2.0", cost: 1677721600000000, pps: 2700000000000000, owned: 0 },
-    { name: "Driver Crash 2.0", cost: 3355443200000000, pps: 5700000000000000, owned: 0 },
-    { name: "Overclock Crash 2.0", cost: 6710886400000000, pps: 12000000000000000, owned: 0 },
-    { name: "System Shutdown 2.0", cost: 13421772800000000, pps: 25000000000000000, owned: 0 }
   ];
 
-  // DOM Elements
-  const terminalOutput = document.getElementById("terminal-output");
-  const commandInput = document.getElementById("command-input");
+  // Get DOM Elements
   const pointsDisplay = document.getElementById("points-display");
   const multiplierDisplay = document.getElementById("multiplier-display");
   const rebirthsDisplay = document.getElementById("rebirths-display");
+  const terminalOutput = document.getElementById("terminal-output");
+  const commandInput = document.getElementById("command-input");
   const shopItemsContainer = document.getElementById("shop-items");
 
-  // Initialize Shop Display
-  function displayShopItems() {
+  // Initialise Shop Display
+  function renderShop() {
     shopItemsContainer.innerHTML = "";
     shopItems.forEach((item, index) => {
       const div = document.createElement("div");
       div.className = "shop-item";
-      div.id = "shop-item-" + index;
-      div.innerHTML = `
-        <strong>${item.name}</strong><br />
-        Cost: ${item.cost.toLocaleString()} pts<br />
-        PPS: ${item.pps.toLocaleString()}<br />
-        Owned: ${item.owned}
-      `;
       if (points < item.cost) {
         div.classList.add("disabled");
       }
+      div.innerHTML = `
+        <strong>${item.name}</strong><br />
+        Cost: ${formatNumber(item.cost)}<br />
+        PPS: ${formatNumber(item.pps)}<br />
+        Owned: ${item.owned}
+      `;
       div.onclick = () => buyItem(index);
       shopItemsContainer.appendChild(div);
     });
   }
 
-  // Add text to terminal output
-  function addToTerminal(text) {
-    const line = document.createElement("div");
-    line.textContent = text;
-    terminalOutput.appendChild(line);
-    terminalOutput.scrollTop = terminalOutput.scrollHeight;
+  // Format large numbers for display
+  function formatNumber(num) {
+    if (num >= 1e12) return (num / 1e12).toFixed(2) + "T";
+    if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
+    if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
+    if (num >= 1e3) return (num / 1e3).toFixed(2) + "K";
+    return Math.floor(num).toString();
   }
 
-  // Buy an item
+  // Buy shop item
   function buyItem(index) {
     const item = shopItems[index];
     if (points >= item.cost) {
       points -= item.cost;
       item.owned++;
       pointsPerSecond += item.pps;
-      // Increase item cost by 20% on each purchase
-      item.cost = Math.floor(item.cost * 1.2);
-      addToTerminal(`Bought ${item.name} (Owned: ${item.owned})`);
-      updateDisplays();
-      displayShopItems();
+      // Increase cost by 15% after purchase for inflation
+      item.cost = Math.floor(item.cost * 1.15);
+      printToTerminal(`Purchased ${item.name} for ${formatNumber(item.cost)} points.`);
+      updateDisplay();
+      renderShop();
     } else {
-      addToTerminal(`Not enough points to buy ${item.name}`);
+      printToTerminal(`Not enough points to buy ${item.name}.`);
     }
   }
 
-  // Update points and multiplier displays
-  function updateDisplays() {
-    pointsDisplay.textContent = points.toLocaleString();
-    multiplierDisplay.textContent = multiplier.toFixed(1) + "x";
+  // Print text to terminal output with auto-scroll
+  function printToTerminal(text) {
+    const p = document.createElement("p");
+    p.textContent = text;
+    terminalOutput.appendChild(p);
+    terminalOutput.scrollTop = terminalOutput.scrollHeight;
+  }
+
+  // Update points, multiplier, rebirths display
+  function updateDisplay() {
+    pointsDisplay.textContent = formatNumber(points);
+    multiplierDisplay.textContent = multiplier.toFixed(2) + "x";
     rebirthsDisplay.textContent = rebirths;
   }
 
-  // Process command input
-  function processCommand(command) {
-    const lowerCmd = command.toLowerCase().trim();
-
-    if (lowerCmd === "click") {
-      points += Math.floor(1 * multiplier);
-      addToTerminal(`You clicked and gained ${Math.floor(1 * multiplier)} points!`);
-    } else if (lowerCmd === "points") {
-      addToTerminal(`You have ${points.toLocaleString()} points.`);
-    } else if (lowerCmd === "shop") {
-      addToTerminal("Available shop items:");
-      shopItems.forEach(item => {
-        addToTerminal(`${item.name} - Cost: ${item.cost.toLocaleString()}, PPS: ${item.pps.toLocaleString()}, Owned: ${item.owned}`);
-      });
-    } else if (lowerCmd === "rebirth") {
+  // Command processor
+  function processCommand(cmd) {
+    cmd = cmd.trim().toLowerCase();
+    if (cmd === "help") {
+      printToTerminal("Commands: help, stats, rebirth, reset, buy [item name], crash");
+    } else if (cmd === "stats") {
+      printToTerminal(`Points: ${formatNumber(points)}, PPS: ${formatNumber(pointsPerSecond * multiplier)}, Multiplier: ${multiplier.toFixed(2)}x, Rebirths: ${rebirths}`);
+    } else if (cmd === "rebirth") {
       if (points >= rebirthThreshold) {
         rebirths++;
+        multiplier = 1 + rebirths * 0.5;
         points = 0;
         pointsPerSecond = 0;
-        multiplier = 1 + (rebirths * 0.1);
+        // Reset shop owned counts & costs to base
         shopItems.forEach(item => {
           item.owned = 0;
-          // Reset item cost to original cost
-          // For simplicity, just reset to starting costs below
+          item.cost = baseCosts[item.name];
         });
-        resetItemCosts();
-        addToTerminal("Rebirth complete! Multiplier increased.");
-        updateDisplays();
-        displayShopItems();
+        printToTerminal("You have successfully rebirthed! Multiplier increased.");
+        updateDisplay();
+        renderShop();
       } else {
-        addToTerminal(`You need at least ${rebirthThreshold.toLocaleString()} points to rebirth.`);
+        printToTerminal(`You need ${formatNumber(rebirthThreshold)} points to rebirth.`);
       }
-    } else if (lowerCmd === "help") {
-      addToTerminal("Commands: click, points, shop, buy <item number>, rebirth, help");
-    } else if (lowerCmd.startsWith("buy ")) {
-      const itemNum = parseInt(lowerCmd.split(" ")[1], 10) - 1;
-      if (!isNaN(itemNum) && itemNum >= 0 && itemNum < shopItems.length) {
-        buyItem(itemNum);
+    } else if (cmd === "reset") {
+      points = 0;
+      pointsPerSecond = 0;
+      multiplier = 1.0;
+      rebirths = 0;
+      shopItems.forEach(item => {
+        item.owned = 0;
+        item.cost = baseCosts[item.name];
+      });
+      printToTerminal("Game has been reset.");
+      updateDisplay();
+      renderShop();
+    } else if (cmd.startsWith("buy ")) {
+      const itemName = cmd.slice(4).trim();
+      const index = shopItems.findIndex(i => i.name.toLowerCase() === itemName);
+      if (index !== -1) {
+        buyItem(index);
       } else {
-        addToTerminal("Invalid item number.");
+        printToTerminal("Item not found in shop.");
       }
+    } else if (cmd === "crash") {
+      points += 1 * multiplier;
+      printToTerminal("404 System crashed. (+1 point x multiplier.)");
+      updateDisplay();
+      renderShop();
     } else {
-      addToTerminal(`Unknown command: ${command}`);
+      printToTerminal(`Unknown command: ${cmd}. Type 'help' for commands.`);
     }
-    updateDisplays();
   }
 
-  // Reset item costs to initial base costs
-  function resetItemCosts() {
-    const baseCosts = [
-      10, 100, 500, 500, 1200, 2500, 5000, 10000, 20000, 40000,
-      90000, 180000, 400000, 800000, 1500000, 3000000, 6000000, 12000000, 25000000, 50000000,
-      100000000, 200000000, 400000000, 800000000, 1600000000, 3200000000, 6400000000, 12800000000, 25600000000, 51200000000,
-      102400000000, 204800000000, 409600000000, 819200000000, 1638400000000, 3276800000000, 6553600000000, 13107200000000, 26214400000000, 52428800000000,
-      104857600000000, 209715200000000, 419430400000000, 838860800000000, 1677721600000000, 3355443200000000, 6710886400000000, 13421772800000000
-    ];
-    shopItems.forEach((item, index) => {
-      item.cost = baseCosts[index];
-    });
-  }
+  // Base costs to reset on rebirth/reset
+  const baseCosts = {};
+  shopItems.forEach(item => {
+    baseCosts[item.name] = item.cost;
+  });
 
-  // Game loop: add points per second every second
+  // Tick points per second every second
   setInterval(() => {
     points += pointsPerSecond * multiplier;
-    updateDisplays();
-    displayShopItems();
+    updateDisplay();
+    renderShop();
   }, 1000);
 
-  // Initial display update
-  updateDisplays();
-  displayShopItems();
-
-  // Command input event
+  // On Enter key in command input
   commandInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       const command = commandInput.value;
+      printToTerminal(`C:\\Windows\\System32> ${command}`);
       processCommand(command);
       commandInput.value = "";
     }
   });
 
-  // For debugging: log the shop items array correctly
-  console.log(shopItems);
+  // Initial render
+  updateDisplay();
+  renderShop();
+  printToTerminal("Welcome to Go Crash The PC");
+  printToTerminal("Type 'help' for a list of commands.");
 </script>
 </body>
 </html>
